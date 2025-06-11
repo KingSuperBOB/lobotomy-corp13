@@ -107,7 +107,7 @@
 	if(istype(Z))
 		cached_multiplier = projectile_damage_multiplier
 		projectile_damage_multiplier *= 2.5
-		fire_delay = 15
+		fire_delay = 8
 	..()
 
 
@@ -298,11 +298,11 @@
 	desc = "All the power of magic bullet, in a smaller package."
 	icon_state = "magic_pistol"
 	inhand_icon_state = "magic_pistol"
-	special = "This weapon pierces all targets. This weapon fires faster with the matching armor"
+	special = "This weapon pierces most targets. This weapon fires and reloads faster with the matching armor"
 	force = 17
 	damtype = BLACK_DAMAGE
 	projectile_path = /obj/projectile/ego_bullet/ego_magicpistol
-	fire_delay = 6
+	fire_delay = 7
 	shotsleft = 7
 	reloadtime = 1.2 SECONDS
 	fire_sound = 'sound/abnormalities/freischutz/shoot.ogg'
@@ -319,11 +319,20 @@
 	var/obj/item/clothing/suit/armor/ego_gear/he/magicbullet/Y = myman.get_item_by_slot(ITEM_SLOT_OCLOTHING)
 	var/obj/item/clothing/suit/armor/ego_gear/realization/bigiron/Z = myman.get_item_by_slot(ITEM_SLOT_OCLOTHING)
 	if(istype(Y))
-		fire_delay = 8
+		fire_delay = 5
 	if(istype(Z))
 		cached_multiplier = projectile_damage_multiplier
 		projectile_damage_multiplier *= 2.5
-		fire_delay = 8
+		fire_delay = 5
+	..()
+
+/obj/item/ego_weapon/ranged/pistol/magic_pistol/reload_ego(mob/user)
+	var/mob/living/carbon/human/myman = user
+	var/obj/item/clothing/suit/armor/ego_gear/he/magicbullet/Y = myman.get_item_by_slot(ITEM_SLOT_OCLOTHING)
+	var/obj/item/clothing/suit/armor/ego_gear/realization/bigiron/Z = myman.get_item_by_slot(ITEM_SLOT_OCLOTHING)
+	reloadtime = initial(reloadtime)
+	if(istype(Y) || istype(Z))
+		reloadtime = 0.8 SECONDS
 	..()
 
 /obj/item/ego_weapon/ranged/pistol/laststop
@@ -511,7 +520,8 @@
 	desc = "Time for a feast! Enjoy the blood-red night imbued with madness to your heart’s content!"
 	icon_state = "banquet"
 	inhand_icon_state = "banquet"
-	special = "This weapon uses HP to reload and heals you on a melee hit."
+	special = "This weapon can use stored blood to fire without reloading. \
+		Blood can be collected by attacking using this as a melee weapon."
 	force = 36
 	damtype = BLACK_DAMAGE
 	attack_speed = 1.8
@@ -525,33 +535,45 @@
 							FORTITUDE_ATTRIBUTE = 60,
 							TEMPERANCE_ATTRIBUTE = 60
 	)
+	var/bloodshot_ready = TRUE
+
+/obj/item/ego_weapon/ranged/banquet/Initialize()
+	. = ..()
+	AddComponent(/datum/component/bloodfeast, siphon = TRUE, range = 2, starting = 150, threshold = 1500, max_amount = 1500)
+
+/obj/item/ego_weapon/ranged/banquet/examine(mob/user)
+	. = ..()
+	var/datum/component/bloodfeast/bloodfeast = GetComponent(/datum/component/bloodfeast)
+	if(bloodfeast) // dont want to succ blood while contained
+		. += "It has [bloodfeast.blood_amount] units of stored blood."
+
+/obj/item/ego_weapon/ranged/banquet/proc/AdjustThirst(blood_amount)
+	var/datum/component/bloodfeast/bloodfeast = GetComponent(/datum/component/bloodfeast)
+	bloodfeast.AdjustBlood(blood_amount)
+	if(bloodfeast.blood_amount >= 150)
+		bloodshot_ready = TRUE
+		return
+	bloodshot_ready = FALSE
 
 /obj/item/ego_weapon/ranged/banquet/attack(mob/living/target, mob/living/carbon/human/user)
 	if(!CanUseEgo(user))
 		return
 	if(!(target.status_flags & GODMODE) && target.stat != DEAD)
-		var/heal_amt = force*0.10
-		if(isanimal(target))
-			var/mob/living/simple_animal/S = target
-			if(S.damage_coeff.getCoeff(damtype) > 0)
-				heal_amt *= S.damage_coeff.getCoeff(damtype)
-			else
-				heal_amt = 0
-		user.adjustBruteLoss(-heal_amt)
-	return ..()
+		var/userjust = (get_modified_attribute_level(user, JUSTICE_ATTRIBUTE))
+		var/justicemod = 1 + userjust/100
+		AdjustThirst(force * justicemod)
+	..()
 
-/obj/item/ego_weapon/ranged/banquet/reload_ego(mob/user)
-	is_reloading = TRUE
-	to_chat(user,span_notice("You start loading a new magazine."))
-	playsound(src, 'sound/weapons/gun/general/slide_lock_1.ogg', 50, TRUE)
-	if(do_after(user, reloadtime, src)) //gotta reload
-		playsound(src, 'sound/weapons/gun/general/bolt_rack.ogg', 50, TRUE)
-		if(isliving(user))
-			var/mob/living/the_gunner = user
-			the_gunner.adjustBruteLoss(3 * (initial(shotsleft) - shotsleft)) // Lose 3 * shots spent in hp
-		shotsleft = initial(shotsleft)
-	is_reloading = FALSE
-	forced_melee = FALSE //no longer forced to resort to melee
+/obj/item/ego_weapon/ranged/banquet/can_shoot()
+	if(bloodshot_ready)
+		forced_melee = FALSE
+		return TRUE
+	..()
+
+/obj/item/ego_weapon/ranged/banquet/process_chamber()
+	if(bloodshot_ready && !shotsleft)
+		AdjustThirst(-150)
+	..()
 
 /obj/item/ego_weapon/ranged/blind_rage
 	name = "Blind Fire"

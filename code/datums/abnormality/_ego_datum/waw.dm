@@ -516,3 +516,24 @@
 /datum/ego_datum/armor/heaven
 	item_path = /obj/item/clothing/suit/armor/ego_gear/waw/heaven
 	cost = 50
+
+// Der Fluchutze - Fell Bullet & Shotgun
+/datum/ego_datum/weapon/fellbullet
+	item_category = "Weapon (Rifle)"
+	item_path = /obj/item/ego_weapon/ranged/fellbullet
+	cost = 50
+
+/datum/ego_datum/weapon/fellscatter
+	item_category = "Weapon (Shotgun)"
+	item_path = /obj/item/ego_weapon/ranged/fellscatter
+	cost = 50
+
+// Spiral of Contempt - Contempt, Awe
+/datum/ego_datum/weapon/contempt
+	item_path = /obj/item/ego_weapon/contempt
+	cost = 50
+
+// Unknown Little Prince Aberration - Tiara
+/datum/ego_datum/armor/tiara
+	item_path = /obj/item/clothing/suit/armor/ego_gear/waw/tiara
+	cost = 50
